@@ -1,7 +1,7 @@
 var amqp = require('amqplib/callback_api');
 var admin = require("firebase-admin");
 
-var serviceAccount = require("./serviceaccountkey.json");
+var serviceAccount = require("./serviceaccount.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -11,8 +11,15 @@ admin.initializeApp({
 
 
 admin.database().ref("/indy").on('child_added' , function(snapshot) {
-	var gitData = JSON.parse( snapshot.val().value.payload );
-	console.log('GIT BRANCHE CHANGED: ' , gitData.ref );
+	var data = snapshot.val()
+
+
+	var gitData = data.value
+	var name = gitData.pusher.name
+	var gitRepo = gitData.repository.git_url
+	var gitBranch = gitData.ref
+
+	console.log(`[${name}] pushed new code at:  '${gitRepo}' @ branch: ${gitBranch}` );
 
 	amqp.connect("amqp://vfujqvkx:xsyZHnPGRhMq8dfLld5mKhQFvyFqpYax@bear.rmq.cloudamqp.com/vfujqvkx" , function(err,conn) {
 		conn.createChannel(function(err, ch) {
@@ -20,11 +27,11 @@ admin.database().ref("/indy").on('child_added' , function(snapshot) {
 			var data = {time: Date.now() , value: gitData }
 			ch.assertQueue(q,{durable:false});
 			ch.sendToQueue(q , new Buffer(JSON.stringify(data)) );
-			console.log(`[x] send message  '${data}' `);
+			console.log(`[${name}] pushed new code at:  '${gitBranch}' `);
 		});
 		setTimeout(() => {
 		  conn.close();
-		  process.exit(0);
+		  // process.exit(0);
 		}, 3000);
 	});
 });

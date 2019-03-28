@@ -4,7 +4,7 @@ WORKDIR /opt/app
 
 COPY package.json .
 COPY index.js .
-COPY serviceaccountkey.json .
+COPY serviceaccount.json .
 
 RUN npm install
 
